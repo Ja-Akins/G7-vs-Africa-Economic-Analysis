@@ -12,7 +12,6 @@ This project performs an **end-to-end Data Engineering and Analytics** analysis 
 * **`src/etl_pipeline.py`**: The complete Python script for concurrent API extraction, IQR outlier detection, and database loading.
 * **`sql/analytical_metrics.sql`**: The SQL script containing advanced queries (Window Functions, CTEs) for economic analysis.
 * **`notebooks/analysis.ipynb`**: Python visualization of the SQL results.
-* **`dashboard/`**: Link to the interactive Tableau Dashboard.
 
 ## 🛠️ Data Engineering Process (Python Implementation)
 
@@ -59,5 +58,6 @@ Explore the full visual analysis on Tableau Public:
 * **Engineering:** ETL Pipeline Architecture, Environment Security (`dotenv`).
 
 ---
+
 
 *Author: Benjamin Akingbade - www.linkedin.com/in/benjamin-akingbade-306022251*
