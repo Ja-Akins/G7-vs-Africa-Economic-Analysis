@@ -35,7 +35,7 @@ INDICATORS = {
     "FS.AST.PRVT.GD.ZS": "Private Credit (% of GDP)",
     "SL.UEM.TOTL.ZS": "Unemployment (%)",
     "GC.DOD.TOTL.GD.ZS": "Central Gov Debt (% of GDP)",
-    "EG.ELC.ACCS.ZS": "Access to Electricity (%)\",
+    "EG.ELC.ACCS.ZS": "Access to Electricity (%)",
     "NE.EXP.GNFS.ZS": "Exports (% of GDP)"
 }
 
