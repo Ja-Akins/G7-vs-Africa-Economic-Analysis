@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Environment variables
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data folders (keep structure only)
+data/raw/*
+data/processed/*
+
+# OS files
+.DS_Store
+Thumbs.db
