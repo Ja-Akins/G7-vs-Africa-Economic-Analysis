@@ -1,190 +1,135 @@
-{
- "cells": [
-  {
-   "cell_type": "code",
-   "execution_count": 2,
-   "id": "2f2cfc9f-7dc3-467f-8525-d8e6e97948ea",
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "Starting extraction for 96 endpoints...\n",
-      "Extracted 2123 rows.\n",
-      "Detecting statistical outliers...\n",
-      "Flagged 159 outliers.\n",
-      "Loading data to MySQL...\n",
-      "Data successfully loaded.\n"
-     ]
-    }
-   ],
-   "source": [
-    "# src/etl_pipeline.py\n",
-    "\n",
-    "import os\n",
-    "import requests\n",
-    "import pandas as pd\n",
-    "import numpy as np\n",
-    "from sqlalchemy import create_engine\n",
-    "from concurrent.futures import ThreadPoolExecutor\n",
-    "from dotenv import load_dotenv\n",
-    "\n",
-    "# 1. Load Environment Variables\n",
-    "load_dotenv()\n",
-    "\n",
-    "# Configuration\n",
-    "DB_USER = os.getenv(\"DB_USER\")\n",
-    "DB_PASS = os.getenv(\"DB_PASSWORD\")\n",
-    "DB_HOST = os.getenv(\"DB_HOST\")\n",
-    "DB_NAME = os.getenv(\"DB_NAME\")\n",
-    "\n",
-    "# Construct Connection String securely\n",
-    "DB_CONFIG = f\"mysql+mysqlconnector://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}\"\n",
-    "\n",
-    "START_YEAR = 2000\n",
-    "END_YEAR = 2024\n",
-    "\n",
-    "COUNTRY_GROUPS = {\n",
-    "    \"G7\": [\"USA\", \"GBR\", \"DEU\", \"FRA\", \"ITA\", \"CAN\", \"JPN\"],\n",
-    "    \"AFRICA_TOP5\": [\"NGA\", \"ZAF\", \"EGY\", \"DZA\", \"MAR\"]\n",
-    "}\n",
-    "\n",
-    "INDICATORS = {\n",
-    "    \"NY.GDP.MKTP.KD.ZG\": \"GDP Growth (%)\",\n",
-    "    \"FP.CPI.TOTL.ZG\": \"Inflation (%)\",\n",
-    "    \"BX.KLT.DINV.WD.GD.ZS\": \"FDI (% of GDP)\",\n",
-    "    \"FS.AST.PRVT.GD.ZS\": \"Private Credit (% of GDP)\",\n",
-    "    \"SL.UEM.TOTL.ZS\": \"Unemployment (%)\",\n",
-    "    \"GC.DOD.TOTL.GD.ZS\": \"Central Gov Debt (% of GDP)\",\n",
-    "    \"EG.ELC.ACCS.ZS\": \"Access to Electricity (%)\",\n",
-    "    \"NE.EXP.GNFS.ZS\": \"Exports (% of GDP)\"\n",
-    "}\n",
-    "\n",
-    "def fetch_data():\n",
-    "    \"\"\"Fetches data concurrently from World Bank API.\"\"\"\n",
-    "    tasks = []\n",
-    "    for group, countries in COUNTRY_GROUPS.items():\n",
-    "        for country in countries:\n",
-    "            tasks.append((country, group))\n",
-    "\n",
-    "    all_data = []\n",
-    "    \n",
-    "    print(f\"Starting extraction for {len(tasks) * len(INDICATORS)} endpoints...\")\n",
-    "    \n",
-    "    with ThreadPoolExecutor(max_workers=5) as executor:\n",
-    "        futures = []\n",
-    "        for country_code, group in tasks:\n",
-    "            for ind_code, ind_name in INDICATORS.items():\n",
-    "                url = (\n",
-    "                    f\"https://api.worldbank.org/v2/country/{country_code}/indicator/{ind_code}\"\n",
-    "                    f\"?date={START_YEAR}:{END_YEAR}&format=json&per_page=100\"\n",
-    "                )\n",
-    "                futures.append((executor.submit(requests.get, url, timeout=10),\n",
-    "                                country_code, group, ind_code, ind_name))\n",
-    "\n",
-    "        for future, country_code, group, ind_code, ind_name in futures:\n",
-    "            try:\n",
-    "                resp = future.result()\n",
-    "                data = resp.json()\n",
-    "                \n",
-    "                # Check if data exists in response\n",
-    "                if len(data) < 2:\n",
-    "                    continue\n",
-    "\n",
-    "                for entry in data[1]:\n",
-    "                    if entry[\"value\"] is not None:\n",
-    "                        all_data.append({\n",
-    "                            \"country\": entry[\"country\"][\"value\"],\n",
-    "                            \"country_code\": entry[\"country\"][\"id\"],\n",
-    "                            \"country_group\": group,\n",
-    "                            \"indicator_code\": ind_code,\n",
-    "                            \"indicator_name\": ind_name,\n",
-    "                            \"year\": int(entry[\"date\"]),\n",
-    "                            \"value\": float(entry[\"value\"])\n",
-    "                        })\n",
-    "            except Exception as e:\n",
-    "                print(f\"Error fetching {ind_code} for {country_code}: {e}\")\n",
-    "                \n",
-    "    return pd.DataFrame(all_data)\n",
-    "\n",
-    "def detect_outliers_iqr(df):\n",
-    "    \"\"\"Flags outliers using the Interquartile Range method.\"\"\"\n",
-    "    print(\"Detecting statistical outliers...\")\n",
-    "    df[\"is_outlier\"] = False\n",
-    "    \n",
-    "    for indicator in df[\"indicator_code\"].unique():\n",
-    "        mask = df[\"indicator_code\"] == indicator\n",
-    "        values = df.loc[mask, \"value\"]\n",
-    "        \n",
-    "        Q1 = values.quantile(0.25)\n",
-    "        Q3 = values.quantile(0.75)\n",
-    "        IQR = Q3 - Q1\n",
-    "        \n",
-    "        lower = Q1 - 1.5 * IQR\n",
-    "        upper = Q3 + 1.5 * IQR\n",
-    "        \n",
-    "        outlier_mask = (df[\"value\"] < lower) | (df[\"value\"] > upper)\n",
-    "        df.loc[mask & outlier_mask, \"is_outlier\"] = True\n",
-    "        \n",
-    "    return df\n",
-    "\n",
-    "def load_to_database(df):\n",
-    "    \"\"\"Loads processed data into MySQL.\"\"\"\n",
-    "    print(\"Loading data to MySQL...\")\n",
-    "    engine = create_engine(DB_CONFIG)\n",
-    "    \n",
-    "    df.to_sql(\n",
-    "        \"economic_indicators\",\n",
-    "        con=engine,\n",
-    "        if_exists=\"replace\",\n",
-    "        index=False,\n",
-    "        chunksize=500,\n",
-    "        method=\"multi\"\n",
-    "    )\n",
-    "    print(\"Data successfully loaded.\")\n",
-    "\n",
-    "if __name__ == \"__main__\":\n",
-    "    # 1. Extract\n",
-    "    df_raw = fetch_data()\n",
-    "    print(f\"Extracted {len(df_raw)} rows.\")\n",
-    "    \n",
-    "    # 2. Transform\n",
-    "    df_clean = detect_outliers_iqr(df_raw)\n",
-    "    print(f\"Flagged {df_clean['is_outlier'].sum()} outliers.\")\n",
-    "    \n",
-    "    # 3. Load\n",
-    "    load_to_database(df_clean)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "97951ead-7b8e-45f7-b35b-3e341d808816",
-   "metadata": {},
-   "outputs": [],
-   "source": []
-  }
- ],
- "metadata": {
-  "kernelspec": {
-   "display_name": "Python 3",
-   "language": "python",
-   "name": "myenv"
-  },
-  "language_info": {
-   "codemirror_mode": {
-    "name": "ipython",
-    "version": 3
-   },
-   "file_extension": ".py",
-   "mimetype": "text/x-python",
-   "name": "python",
-   "nbconvert_exporter": "python",
-   "pygments_lexer": "ipython3",
-   "version": "3.13.5"
-  }
- },
- "nbformat": 4,
- "nbformat_minor": 5
+# src/etl_pipeline.py
+
+import os
+import requests
+import pandas as pd
+import numpy as np
+from sqlalchemy import create_engine
+from concurrent.futures import ThreadPoolExecutor
+from dotenv import load_dotenv
+
+# 1. Load Environment Variables
+load_dotenv()
+
+# Configuration
+DB_USER = os.getenv("DB_USER")
+DB_PASS = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_NAME = os.getenv("DB_NAME")
+
+# Construct Connection String securely
+DB_CONFIG = f"mysql+mysqlconnector://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}"
+
+START_YEAR = 2000
+END_YEAR = 2024
+
+COUNTRY_GROUPS = {
+    "G7": ["USA", "GBR", "DEU", "FRA", "ITA", "CAN", "JPN"],
+    "AFRICA_TOP5": ["NGA", "ZAF", "EGY", "DZA", "MAR"]
 }
+
+INDICATORS = {
+    "NY.GDP.MKTP.KD.ZG": "GDP Growth (%)",
+    "FP.CPI.TOTL.ZG": "Inflation (%)",
+    "BX.KLT.DINV.WD.GD.ZS": "FDI (% of GDP)",
+    "FS.AST.PRVT.GD.ZS": "Private Credit (% of GDP)",
+    "SL.UEM.TOTL.ZS": "Unemployment (%)",
+    "GC.DOD.TOTL.GD.ZS": "Central Gov Debt (% of GDP)",
+    "EG.ELC.ACCS.ZS": "Access to Electricity (%)\",
+    "NE.EXP.GNFS.ZS": "Exports (% of GDP)"
+}
+
+def fetch_data():
+    """Fetches data concurrently from World Bank API."""
+    tasks = []
+    for group, countries in COUNTRY_GROUPS.items():
+        for country in countries:
+            tasks.append((country, group))
+
+    all_data = []
+    
+    print(f"Starting extraction for {len(tasks) * len(INDICATORS)} endpoints...")
+    
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = []
+        for country_code, group in tasks:
+            for ind_code, ind_name in INDICATORS.items():
+                url = (
+                    f"https://api.worldbank.org/v2/country/{country_code}/indicator/{ind_code}"
+                    f"?date={START_YEAR}:{END_YEAR}&format=json&per_page=100"
+                )
+                futures.append((executor.submit(requests.get, url, timeout=10),
+                                country_code, group, ind_code, ind_name))
+
+        for future, country_code, group, ind_code, ind_name in futures:
+            try:
+                resp = future.result()
+                data = resp.json()
+                
+                # Check if data exists in response
+                if len(data) < 2:
+                    continue
+
+                for entry in data[1]:
+                    if entry["value"] is not None:
+                        all_data.append({
+                            "country": entry["country"]["value"],
+                            "country_code": entry["country"]["id"],
+                            "country_group": group,
+                            "indicator_code": ind_code,
+                            "indicator_name": ind_name,
+                            "year": int(entry["date"]),
+                            "value": float(entry["value"])
+                        })
+            except Exception as e:
+                print(f"Error fetching {ind_code} for {country_code}: {e}")
+                
+    return pd.DataFrame(all_data)
+
+def detect_outliers_iqr(df):
+    """Flags outliers using the Interquartile Range method."""
+    print("Detecting statistical outliers...")
+    df["is_outlier"] = False
+    
+    for indicator in df["indicator_code"].unique():
+        mask = df["indicator_code"] == indicator
+        values = df.loc[mask, "value"]
+        
+        Q1 = values.quantile(0.25)
+        Q3 = values.quantile(0.75)
+        IQR = Q3 - Q1
+        
+        lower = Q1 - 1.5 * IQR
+        upper = Q3 + 1.5 * IQR
+        
+        outlier_mask = (df["value"] < lower) | (df["value"] > upper)
+        df.loc[mask & outlier_mask, "is_outlier"] = True
+        
+    return df
+
+def load_to_database(df):
+    """Loads processed data into MySQL."""
+    print("Loading data to MySQL...")
+    engine = create_engine(DB_CONFIG)
+    
+    df.to_sql(
+        "economic_indicators",
+        con=engine,
+        if_exists="replace",
+        index=False,
+        chunksize=500,
+        method="multi"
+    )
+    print("Data successfully loaded.")
+
+if __name__ == "__main__":
+    # 1. Extract
+    df_raw = fetch_data()
+    print(f"Extracted {len(df_raw)} rows.")
+    
+    # 2. Transform
+    df_clean = detect_outliers_iqr(df_raw)
+    print(f"Flagged {df_clean['is_outlier'].sum()} outliers.")
+    
+    # 3. Load
+    load_to_database(df_clean)
