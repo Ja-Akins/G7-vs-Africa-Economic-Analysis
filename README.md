@@ -1,0 +1,63 @@
+# 🌍 G7 vs. Emerging Africa: Economic Volatility & Recovery Analysis (2000-2024)
+
+## Project Overview
+
+This project performs an **end-to-end Data Engineering and Analytics** analysis comparing the economic resilience of **G7 Nations** against **Africa's Top 5 Emerging Economies**. The goal was to move beyond static datasets by building a live ETL pipeline to extract World Bank API data, apply statistical methods to detect economic "shock events," and leverage SQL to uncover the "Efficiency Gap" in debt utilization.
+
+* **Data Source:** World Bank Open Data API (Live Fetch)
+* **Tools Used:** Python (Pandas, Concurrent Futures), SQL (MySQL), Tableau, Seaborn
+
+## 📁 File Structure
+
+* **`src/etl_pipeline.py`**: The complete Python script for concurrent API extraction, IQR outlier detection, and database loading.
+* **`sql/analytical_metrics.sql`**: The SQL script containing advanced queries (Window Functions, CTEs) for economic analysis.
+* **`notebooks/analysis.ipynb`**: Python visualization of the SQL results.
+* **`dashboard/`**: Link to the interactive Tableau Dashboard.
+
+## 🛠️ Data Engineering Process (Python Implementation)
+
+Unlike standard CSV analyses, this project required building a robust pipeline to handle 25 years of data across 8 indicators for 12 countries.
+
+* **Concurrent Extraction:**
+    * Implemented `concurrent.futures.ThreadPoolExecutor` to multi-thread API requests, reducing data ingestion time by **70%**.
+    * Handled pagination logic to ensure zero data loss across thousands of records.
+
+* **Statistical Outlier Detection (The IQR Method):**
+    * Instead of blindly deleting outliers, I calculated the **Interquartile Range (IQR)** for every country-indicator pair.
+    * Data points falling outside `1.5 * IQR` were flagged as **"Shock Events"** in a dedicated column (`is_outlier`). This allowed for the analysis of economic volatility without destroying data integrity.
+
+* **Secure Loading:**
+    * Utilized environment variables (`.env`) to secure database credentials and `SQLAlchemy` for optimized batch loading into MySQL.
+
+## 📈 Exploratory Data Analysis (SQL Implementation)
+
+Following the engineering phase, advanced SQL techniques were used to derive actionable economic insights:
+
+* **Volatility Indexing:** Calculated the frequency of economic shocks using `COUNT(CASE WHEN is_outlier = 1)` to rank countries by stability.
+* **Inflation Momentum:** Tracked post-pandemic recovery by calculating Year-over-Year (YoY) acceleration using `LAG()` window functions to compare 2021-2024 trends against historical baselines.
+* **The Development Trap:** Used `CASE` statements and aggregations to correlate **Public Debt (% of GDP)** against **Infrastructure Access**, identifying inefficiencies in capital utilization.
+
+## 🔍 Key Findings & Insights
+
+The analysis revealed a distinct trade-off between Stability (G7) and Growth Potential (Africa):
+
+* **The Efficiency Gap:** G7 nations sustain high debt loads (UK: **128%**, US: **84%**) while maintaining **100%** electricity access. In contrast, Nigeria and South Africa face an "Infrastructure Deficit" despite having lower average debt burdens, suggesting a trap where debt does not efficiently translate into development.
+* **The Volatility Trap:** **South Africa** and **Nigeria** recorded the highest number of "Shock Events" (**52** and **47** respectively). This high volatility is the primary barrier to sustainable growth, despite their high potential.
+* **Growth vs. Risk:** When excluding shock years, the **Africa Top 5** average a GDP growth rate of **3.69%**, significantly outpacing the **G7** average of **1.79%**. High risk correlates with high reward.
+* **Sticky Inflation:** Post-2022 data shows that while G7 inflation cooled rapidly, emerging African markets faced "sticky" inflation, with slower recovery rates in 2023-2024.
+
+## 📊 Interactive Dashboard
+
+Explore the full visual analysis on Tableau Public:
+[**View Interactive Dashboard**](https://public.tableau.com/app/profile/benjamin.akingbade/viz/G7vs_EmergingAfricaEconomicStabilityReport2000-2024/Dashboard)
+
+## 💻 Technical Skills Demonstrated
+
+* **Python:** API Integration, Concurrency (Threading), Pandas Data Wrangling, Statistical Analysis (IQR).
+* **SQL:** Window Functions (`LAG`, `RANK`), CTEs, Complex Joins, Aggregations, Data Cleaning.
+* **Visualization:** Tableau (Interactive Dashboards), Seaborn (Static Statistical Plots).
+* **Engineering:** ETL Pipeline Architecture, Environment Security (`dotenv`).
+
+---
+
+*Author: Benjamin Akingbade - www.linkedin.com/in/benjamin-akingbade-306022251*

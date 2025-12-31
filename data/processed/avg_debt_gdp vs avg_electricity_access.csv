@@ -1,0 +1,7 @@
+country,country_group,avg_debt_gdp,avg_electricity_access
+"United Kingdom",G7,128.48,100
+"Egypt, Arab Rep.",AFRICA_TOP5,85.79,99.26
+"United States",G7,84.47,100
+"South Africa",AFRICA_TOP5,63.14,82.76
+Canada,G7,54.67,100
+Morocco,AFRICA_TOP5,47.66,90.45
