@@ -1,6 +1,6 @@
-🌍 G7 vs. Emerging Africa: Economic Volatility & Recovery Analysis (2000-2024)
+# 🌍 G7 vs. Emerging Africa: Economic Volatility & Recovery Analysis (2000-2024)
 
-Project Overview
+## Project Overview
 
 This project performs an end-to-end Data Engineering and Analytics analysis comparing the economic resilience of G7 Nations against Africa's Top 5 Emerging Economies. The goal was to move beyond static datasets by building a live ETL pipeline to extract World Bank API data, apply statistical methods to detect economic "shock events," and leverage SQL to uncover the "Efficiency Gap" in debt utilization.
 
