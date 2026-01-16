@@ -23,6 +23,8 @@ This project performs an **end-to-end Data Engineering and Analytics** analysis 
 ├── requirements.txt        # List of dependencies
 └── README.md               # Project documentation
 
+```text
+
 ## 🛠️ Data Engineering Process (Python Implementation)
 
 Unlike standard CSV analyses, this project required building a robust pipeline to handle 25 years of data across 8 indicators for 12 countries.
