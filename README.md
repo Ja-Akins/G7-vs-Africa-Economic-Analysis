@@ -1,5 +1,27 @@
 # 🌍 G7 vs. Emerging Africa: Economic Volatility & Recovery Analysis (2000-2024)
 
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
+
+
+
+
+![Pandas](https://img.shields.io/badge/Pandas-150458?style=flat&logo=pandas&logoColor=white)
+
+
+
+
+![SQL](https://img.shields.io/badge/SQL-4479A1?style=flat&logo=postgresql&logoColor=white)
+
+
+
+
+![Tableau](https://img.shields.io/badge/Tableau-E97627?style=flat&logo=tableau&logoColor=white)
+
+
+
+
+![Jupyter](https://img.shields.io/badge/Jupyter-F37626?style=flat&logo=jupyter&logoColor=white)
+
 ## Project Overview
 
 This project performs an end-to-end Data Engineering and Analytics analysis comparing the economic resilience of G7 Nations against Africa's Top 5 Emerging Economies. The goal was to move beyond static datasets by building a live ETL pipeline to extract World Bank API data, apply statistical methods to detect economic "shock events," and leverage SQL to uncover the "Efficiency Gap" in debt utilization.
